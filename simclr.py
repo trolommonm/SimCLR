@@ -64,7 +64,7 @@ class SimCLR(object):
         n_iter = 0
         logging.info(f"Start SimCLR training for {self.args.epochs} epochs.")
         logging.info(f"Disable gpu: {self.args.disable_cuda}.")
-
+        max_top1 = 0
         for epoch_counter in range(self.args.epochs):
             for images, _ in tqdm(train_loader):
                 images = torch.cat(images, dim=0)
@@ -89,6 +89,16 @@ class SimCLR(object):
                     self.writer.add_scalar('acc/top1', top1[0], global_step=n_iter)
                     self.writer.add_scalar('acc/top5', top5[0], global_step=n_iter)
                     self.writer.add_scalar('learning_rate', self.scheduler.get_lr()[0], global_step=n_iter)
+
+                if top1 > max_top1:
+                    max_top1 = top1
+                    save_checkpoint({
+                        'epoch': self.args.epochs,
+                        'arch': self.args.arch,
+                        'state_dict': self.model.state_dict(),
+                        'optimizer': self.optimizer.state_dict(),
+                    }, is_best=True, filename=os.path.join(self.writer.log_dir, "model_best.pth.tar"))
+                    logging.info(f"Best model checkpoint and metadata has been saved at {self.writer.log_dir}.")
 
                 n_iter += 1
 
