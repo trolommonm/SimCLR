@@ -90,8 +90,8 @@ class SimCLR(object):
                     self.writer.add_scalar('acc/top5', top5[0], global_step=n_iter)
                     self.writer.add_scalar('learning_rate', self.scheduler.get_lr()[0], global_step=n_iter)
 
-                if top1 > max_top1:
-                    max_top1 = top1
+                if top1[0] > max_top1:
+                    max_top1 = top1[0]
                     save_checkpoint({
                         'epoch': self.args.epochs,
                         'arch': self.args.arch,
