@@ -18,8 +18,16 @@ class SimCLR(object):
         self.optimizer = kwargs['optimizer']
         self.scheduler = kwargs['scheduler']
         self.writer = SummaryWriter()
-        logging.basicConfig(filename=os.path.join(self.writer.log_dir, 'training.log'), level=logging.INFO)
+        self._init_logger()
         self.criterion = torch.nn.CrossEntropyLoss().to(self.args.device)
+
+    def _init_logger(self):
+        self.logger = logging.getLogger(__name__)
+        console_handler = logging.StreamHandler()
+        file_handler = logging.FileHandler(os.path.join(self.writer.log_dir, 'training.log'))
+        self.logger.addHandler(console_handler)
+        self.logger.addHandler(file_handler)
+        self.logger.setLevel(logging.INFO)
 
     def info_nce_loss(self, features):
         labels = torch.cat([torch.arange(self.args.batch_size) for i in range(self.args.n_views)], dim=0)
@@ -68,8 +76,9 @@ class SimCLR(object):
         save_config_file(self.writer.log_dir, self.args)
 
         n_iter = 0
-        logging.info(f"Start SimCLR training for {self.args.epochs} epochs.")
-        logging.info(f"Disable gpu: {self.args.disable_cuda}.")
+        self.logger.info(f"Start SimCLR training for {self.args.epochs} epochs.")
+        self.logger.info(f"Disable gpu: {self.args.disable_cuda}.")
+        self.logger.info(f"FP16 Precision: {self.args.fp16_precision}.")
         max_top1 = 0
         for epoch_counter in range(1, self.args.epochs + 1):
             loss_epoch = acc1_epoch = acc5_epoch = 0
@@ -100,15 +109,16 @@ class SimCLR(object):
             self.writer.add_scalar('acc/top1', acc1_epoch / len(train_loader), global_step=epoch_counter)
             self.writer.add_scalar('acc/top5', acc5_epoch / len(train_loader), global_step=epoch_counter)
             self.writer.add_scalar('learning_rate', self.scheduler.get_last_lr()[0], global_step=epoch_counter)
-            logging.info(f"Epoch: {epoch_counter}\t"
+            self.logger.info(f"Epoch: {epoch_counter}\t"
                          + f"Loss: {loss_epoch}\t"
                          + f"Top1 accuracy: {acc1_epoch / len(train_loader)}")
 
             if (acc1_epoch / len(train_loader)) > max_top1:
                 max_top1 = acc1_epoch / len(train_loader)
                 self._save_checkpoint(epoch_counter, self.args.arch, self.model, self.optimizer, self.scheduler, True)
+                self.logger("Saved best model.")
 
             self.scheduler.step()
 
-        logging.info("Training has finished.")
-        logging.info(f"Model checkpoint and metadata has been saved at {self.writer.log_dir}.")
+        self.logger.info("Training has finished.")
+        self.logger.info(f"Model checkpoint and metadata has been saved at {self.writer.log_dir}.")
