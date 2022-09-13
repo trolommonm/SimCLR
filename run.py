@@ -84,7 +84,7 @@ def main():
     # optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.weight_decay, nesterov=True)
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=0,
     #                                                        last_epoch=-1)
-    optimizer = LARS(model.parameters(), lr=args.lr, weight_decay=args.weight_decay, nesterov=True)
+    optimizer = LARS(model.parameters(), lr=args.lr, weight_decay=args.weight_decay, nesterov=False)
     scheduler = LinearWarmupCosineAnnealing(optimizer, 10, args.epochs, args.lr, 0.0001)
 
     #  It’s a no-op if the 'gpu_index' argument is a negative integer or None.
