@@ -99,7 +99,7 @@ class SimCLR(object):
             self.writer.add_scalar('loss', loss_epoch, global_step=epoch_counter)
             self.writer.add_scalar('acc/top1', acc1_epoch / len(train_loader), global_step=epoch_counter)
             self.writer.add_scalar('acc/top5', acc5_epoch / len(train_loader), global_step=epoch_counter)
-            self.writer.add_scalar('learning_rate', self.scheduler.get_last_lr(), global_step=epoch_counter)
+            self.writer.add_scalar('learning_rate', self.scheduler.get_last_lr()[0], global_step=epoch_counter)
             logging.info(f"Epoch: {epoch_counter}\t"
                          + f"Loss: {loss_epoch}\t"
                          + f"Top1 accuracy: {acc1_epoch / len(train_loader)}")
