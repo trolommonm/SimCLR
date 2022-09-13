@@ -116,7 +116,7 @@ class SimCLR(object):
             if (acc1_epoch / len(train_loader)) > max_top1:
                 max_top1 = acc1_epoch / len(train_loader)
                 self._save_checkpoint(epoch_counter, self.args.arch, self.model, self.optimizer, self.scheduler, True)
-                self.logger("Saved best model.")
+                self.logger.info("Saved best model.")
 
             self.scheduler.step()
 
