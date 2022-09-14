@@ -57,9 +57,10 @@ def main():
     parameters = list(filter(lambda p: p.requires_grad, model.parameters()))
     assert len(parameters) == 2  # fc.weight, fc.bias
 
-    train_loader, test_loader = get_cifar10_data_loaders(download=True, batch_size=512)
+    train_loader, test_loader = get_cifar10_data_loaders(download=True, batch_size=1024)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-6)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-6)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.1, weight_decay=0.0001, momentum=0.9)
     criterion = torch.nn.CrossEntropyLoss().to(device)
 
     epochs = 100
