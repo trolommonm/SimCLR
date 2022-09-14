@@ -12,7 +12,9 @@ from tqdm import tqdm
 
 def get_cifar10_data_loaders(download, shuffle=False, batch_size=256):
     train_dataset = datasets.CIFAR10('./datasets', train=True, download=download,
-                                     transform=ContrastiveLearningDataset.get_simclr_pipeline_transform(32))
+                                     transform=transforms.Compose([transforms.RandomResizedCrop(size=32),
+                                                                   transforms.ToTensor()])
+                                     )
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size,
                               num_workers=8, drop_last=False, shuffle=shuffle)
