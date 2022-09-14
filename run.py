@@ -37,6 +37,8 @@ parser.add_argument('--lr', '--learning-rate', default=0.0003, type=float,
 parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)',
                     dest='weight_decay')
+parser.add_argument('--momentum', help='momentum for optimizer', type=float,
+                    default=0.9)
 parser.add_argument('--seed', default=None, type=int,
                     help='seed for initializing training. ')
 parser.add_argument('--disable-cuda', action='store_true',
@@ -52,6 +54,7 @@ parser.add_argument('--temperature', default=0.07, type=float,
                     help='softmax temperature (default: 0.07)')
 parser.add_argument('--n-views', default=2, type=int, metavar='N',
                     help='Number of views for contrastive learning training.')
+parser.add_argument('--color-dist-s', default=0.5, type=float, help='Color distortion strength')
 parser.add_argument('--gpu-index', default=0, type=int, help='Gpu index.')
 
 
@@ -69,7 +72,7 @@ def main():
 
     dataset = ContrastiveLearningDataset(args.data)
 
-    train_dataset = dataset.get_dataset(args.dataset_name, args.n_views)
+    train_dataset = dataset.get_dataset(args.dataset_name, args.n_views, args.color_dist_s)
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=True,
@@ -85,8 +88,8 @@ def main():
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=0,
     #                                                        last_epoch=-1)
     # momentum???
-    optimizer = LARS(model.parameters(), lr=args.lr, weight_decay=args.weight_decay, momentum=0.9, nesterov=False)
-    scheduler = LinearWarmupCosineAnnealing(optimizer, 10, args.epochs, args.lr, 0.0001)
+    optimizer = LARS(model.parameters(), lr=args.lr, weight_decay=args.weight_decay, momentum=args.momentum, nesterov=False)
+    scheduler = LinearWarmupCosineAnnealing(optimizer, 10, args.epochs, args.lr, 0.001)
 
     #  It’s a no-op if the 'gpu_index' argument is a negative integer or None.
     with torch.cuda.device(args.gpu_index):

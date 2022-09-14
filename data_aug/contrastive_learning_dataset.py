@@ -10,27 +10,38 @@ class ContrastiveLearningDataset:
         self.root_folder = root_folder
 
     @staticmethod
-    def get_simclr_pipeline_transform(size, s=1):
+    def get_simclr_pipeline_transform(dataset_name, size, s=1):
         """Return a set of data augmentation transformations as described in the SimCLR paper."""
         color_jitter = transforms.ColorJitter(0.8 * s, 0.8 * s, 0.8 * s, 0.2 * s)
-        data_transforms = transforms.Compose([transforms.RandomResizedCrop(size=size),
-                                              transforms.RandomHorizontalFlip(),
-                                              transforms.RandomApply([color_jitter], p=0.8),
-                                              transforms.RandomGrayscale(p=0.2),
-                                              GaussianBlur(kernel_size=int(0.1 * size)),
-                                              transforms.ToTensor()])
+
+        if dataset_name == "stl10":
+            data_transforms = transforms.Compose([transforms.RandomResizedCrop(size=size),
+                                                  transforms.RandomHorizontalFlip(),
+                                                  transforms.RandomApply([color_jitter], p=0.8),
+                                                  transforms.RandomGrayscale(p=0.2),
+                                                  GaussianBlur(kernel_size=int(0.1 * size)),
+                                                  transforms.ToTensor()])
+        elif dataset_name == "cifar10":
+            data_transforms = transforms.Compose([transforms.RandomResizedCrop(size=size),
+                                                  transforms.RandomHorizontalFlip(),
+                                                  transforms.RandomApply([color_jitter], p=0.8),
+                                                  transforms.RandomGrayscale(p=0.2),
+                                                  transforms.ToTensor()])
+
         return data_transforms
 
-    def get_dataset(self, name, n_views):
+    def get_dataset(self, name, n_views, color_dist_s):
         valid_datasets = {'cifar10': lambda: datasets.CIFAR10(self.root_folder, train=True,
                                                               transform=ContrastiveLearningViewGenerator(
-                                                                  self.get_simclr_pipeline_transform(32),
+                                                                  self.get_simclr_pipeline_transform("cifar10", 32,
+                                                                                                     color_dist_s),
                                                                   n_views),
                                                               download=True),
 
                           'stl10': lambda: datasets.STL10(self.root_folder, split='unlabeled',
                                                           transform=ContrastiveLearningViewGenerator(
-                                                              self.get_simclr_pipeline_transform(96),
+                                                              self.get_simclr_pipeline_transform("stl10", 96,
+                                                                                                 color_dist_s),
                                                               n_views),
                                                           download=True)}
 
