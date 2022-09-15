@@ -99,8 +99,10 @@ def main():
 
         top1_accuracy /= (counter + 1)
         top5_accuracy /= (counter + 1)
-        print(
-            f"Epoch {epoch}\tTop1 Train accuracy {top1_train_accuracy.item()}\tTop1 Test accuracy: {top1_accuracy.item()}\tTop5 test acc: {top5_accuracy.item()}")
+        print(f"Epoch {epoch}\t" +
+              f"Top1 Train accuracy {top1_train_accuracy.item()}\t" +
+              f"Top1 Test accuracy: {top1_accuracy.item()}\t" +
+              f"Top5 test acc: {top5_accuracy.item()}")
 
 
 if __name__ == "__main__":
