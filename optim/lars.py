@@ -5,6 +5,7 @@ from torch.optim.optimizer import Optimizer, required
 Adapted from https://github.com/4uiiurz1/pytorch-lars/blob/master/lars.py
 """
 
+
 class LARS(Optimizer):
     r"""Implements LARS (Layer-wise Adaptive Rate Scaling).
 
@@ -72,7 +73,7 @@ class LARS(Optimizer):
                 g_norm = torch.norm(p.grad.data)
                 if w_norm * g_norm > 0:
                     local_lr = eta * w_norm / (g_norm +
-                        weight_decay * w_norm + epsilon)
+                                               weight_decay * w_norm + epsilon)
                 else:
                     local_lr = 1
                 d_p = p.grad.data

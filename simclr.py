@@ -1,7 +1,5 @@
 import logging
 import os
-import sys
-
 import torch
 import torch.nn.functional as F
 from torch.cuda.amp import GradScaler, autocast
@@ -20,11 +18,18 @@ class SimCLR(object):
         self.optimizer = kwargs['optimizer']
         self.scheduler = kwargs['scheduler']
         self.writer = SummaryWriter()
-        logging.basicConfig(filename=os.path.join(self.writer.log_dir, 'training.log'), level=logging.DEBUG)
+        self._init_logger()
         self.criterion = torch.nn.CrossEntropyLoss().to(self.args.device)
 
-    def info_nce_loss(self, features):
+    def _init_logger(self):
+        self.logger = logging.getLogger(__name__)
+        console_handler = logging.StreamHandler()
+        file_handler = logging.FileHandler(os.path.join(self.writer.log_dir, 'training.log'))
+        self.logger.addHandler(console_handler)
+        self.logger.addHandler(file_handler)
+        self.logger.setLevel(logging.INFO)
 
+    def info_nce_loss(self, features):
         labels = torch.cat([torch.arange(self.args.batch_size) for i in range(self.args.n_views)], dim=0)
         labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
         labels = labels.to(self.args.device)
@@ -54,21 +59,31 @@ class SimCLR(object):
         logits = logits / self.args.temperature
         return logits, labels
 
-    def train(self, train_loader):
+    def _save_checkpoint(self, epoch_num, arch, model, optimizer, scheduler, is_best):
+        file_name = "model_best.pth.tar" if is_best else f"checkpoint_{epoch_num}.pth.tar"
+        save_checkpoint({
+            'epoch': epoch_num,
+            'arch': arch,
+            'state_dict': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'scheduler': scheduler.state_dict()
+        }, is_best=True, filename=os.path.join(self.writer.log_dir, file_name))
 
+    def train(self, train_loader):
         scaler = GradScaler(enabled=self.args.fp16_precision)
 
         # save config file
         save_config_file(self.writer.log_dir, self.args)
 
         n_iter = 0
-        logging.info(f"Start SimCLR training for {self.args.epochs} epochs.")
-        logging.info(f"Disable gpu: {self.args.disable_cuda}.")
+        self.logger.info(f"Start SimCLR training for {self.args.epochs} epochs.")
+        self.logger.info(f"Disable gpu: {self.args.disable_cuda}.")
+        self.logger.info(f"FP16 Precision: {self.args.fp16_precision}.")
         max_top1 = 0
-        for epoch_counter in range(self.args.epochs):
+        for epoch_counter in range(1, self.args.epochs + 1):
+            loss_epoch = acc1_epoch = acc5_epoch = 0
             for images, _ in tqdm(train_loader):
                 images = torch.cat(images, dim=0)
-
                 images = images.to(self.args.device)
 
                 with autocast(enabled=self.args.fp16_precision):
@@ -77,43 +92,33 @@ class SimCLR(object):
                     loss = self.criterion(logits, labels)
 
                 self.optimizer.zero_grad()
-
                 scaler.scale(loss).backward()
-
                 scaler.step(self.optimizer)
                 scaler.update()
 
-                if n_iter % self.args.log_every_n_steps == 0:
-                    top1, top5 = accuracy(logits, labels, topk=(1, 5))
-                    self.writer.add_scalar('loss', loss, global_step=n_iter)
-                    self.writer.add_scalar('acc/top1', top1[0], global_step=n_iter)
-                    self.writer.add_scalar('acc/top5', top5[0], global_step=n_iter)
-                    self.writer.add_scalar('learning_rate', self.scheduler.get_lr()[0], global_step=n_iter)
-
-                if top1[0] > max_top1:
-                    max_top1 = top1[0]
-                    save_checkpoint({
-                        'epoch': self.args.epochs,
-                        'arch': self.args.arch,
-                        'state_dict': self.model.state_dict(),
-                        'optimizer': self.optimizer.state_dict(),
-                    }, is_best=True, filename=os.path.join(self.writer.log_dir, "model_best.pth.tar"))
-                    logging.info(f"Best model checkpoint and metadata has been saved at {self.writer.log_dir}.")
-
+                loss_epoch += loss
+                top1, top5 = accuracy(logits, labels, topk=(1, 5))
+                acc1_epoch += top1[0]
+                acc5_epoch += top5[0]
                 n_iter += 1
 
-            # warmup for the first 10 epochs
-            if epoch_counter >= 10:
-                self.scheduler.step()
-            logging.debug(f"Epoch: {epoch_counter}\tLoss: {loss}\tTop1 accuracy: {top1[0]}")
+            if epoch_counter % 100 == 0:
+                self._save_checkpoint(epoch_counter, self.args.arch, self.model, self.optimizer, self.scheduler, False)
 
-        logging.info("Training has finished.")
-        # save model checkpoints
-        checkpoint_name = 'checkpoint_{:04d}.pth.tar'.format(self.args.epochs)
-        save_checkpoint({
-            'epoch': self.args.epochs,
-            'arch': self.args.arch,
-            'state_dict': self.model.state_dict(),
-            'optimizer': self.optimizer.state_dict(),
-        }, is_best=False, filename=os.path.join(self.writer.log_dir, checkpoint_name))
-        logging.info(f"Model checkpoint and metadata has been saved at {self.writer.log_dir}.")
+            self.writer.add_scalar('loss', loss_epoch, global_step=epoch_counter)
+            self.writer.add_scalar('acc/top1', acc1_epoch / len(train_loader), global_step=epoch_counter)
+            self.writer.add_scalar('acc/top5', acc5_epoch / len(train_loader), global_step=epoch_counter)
+            self.writer.add_scalar('learning_rate', self.scheduler.get_last_lr()[0], global_step=epoch_counter)
+            self.logger.info(f"Epoch: {epoch_counter}\t"
+                             + f"Loss: {loss_epoch}\t"
+                             + f"Top1 accuracy: {acc1_epoch / len(train_loader)}")
+
+            if (acc1_epoch / len(train_loader)) > max_top1:
+                max_top1 = acc1_epoch / len(train_loader)
+                self._save_checkpoint(epoch_counter, self.args.arch, self.model, self.optimizer, self.scheduler, True)
+                self.logger.info("Saved best model.")
+
+            self.scheduler.step()
+
+        self.logger.info("Training has finished.")
+        self.logger.info(f"Model checkpoint and metadata has been saved at {self.writer.log_dir}.")
