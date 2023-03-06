@@ -91,7 +91,7 @@ def main():
     optimizer = LARS(model.parameters(), lr=args.lr, weight_decay=args.weight_decay, momentum=args.momentum, nesterov=False)
     scheduler = LinearWarmupCosineAnnealing(optimizer, 10, args.epochs, args.lr, 0.001)
 
-    #  It’s a no-op if the 'gpu_index' argument is a negative integer or None.
+    #  It's a no-op if the 'gpu_index' argument is a negative integer or None.
     with torch.cuda.device(args.gpu_index):
         simclr = SimCLR(model=model, optimizer=optimizer, scheduler=scheduler, args=args)
         simclr.train(train_loader)
