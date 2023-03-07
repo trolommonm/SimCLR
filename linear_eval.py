@@ -102,8 +102,8 @@ def main(args):
                 top1, top5 = accuracy(logits, y_batch, topk=(1, 5))
                 # top1_accuracy += top1[0]
                 # top5_accuracy += top5[0]
-                top1_accuracy.update(top1[0], y_batch.size[0])
-                top5_accuracy.update(top5[0], y_batch.size[0])
+                top1_accuracy.update(top1[0], y_batch.shape[0])
+                top5_accuracy.update(top5[0], y_batch.shape[0])
 
         # top1_accuracy /= (counter + 1)
         # top5_accuracy /= (counter + 1)
