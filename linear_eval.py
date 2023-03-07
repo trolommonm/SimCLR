@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 import torchvision
 import torchvision.transforms as transforms
 from torchvision import datasets
-from utils import accuracy
+from utils import accuracy, AverageMeter
 from data_aug.contrastive_learning_dataset import ContrastiveLearningDataset
 from tqdm import tqdm
 
@@ -71,7 +71,7 @@ def main(args):
     epochs = args.epochs
     for epoch in range(epochs):
         model.train()
-        top1_train_accuracy = 0
+        top1_train_accuracy = AverageMeter()
         counter = 0
         for (x_batch, y_batch) in tqdm(train_loader):
             x_batch = x_batch.to(device)
@@ -80,16 +80,17 @@ def main(args):
             logits = model(x_batch)
             loss = criterion(logits, y_batch)
             top1 = accuracy(logits, y_batch, topk=(1,))
-            top1_train_accuracy += top1[0]
+            # top1_train_accuracy += top1[0]
+            top1_train_accuracy.update(top1[0], y_batch.shape[0])
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             counter += 1
 
-        top1_train_accuracy /= counter
-        top1_accuracy = 0
-        top5_accuracy = 0
+        # top1_train_accuracy /= counter
+        top1_accuracy = AverageMeter()
+        top5_accuracy = AverageMeter()
         model.eval()
         for counter, (x_batch, y_batch) in enumerate(test_loader):
             with torch.no_grad():
@@ -99,15 +100,17 @@ def main(args):
                 logits = model(x_batch)
 
                 top1, top5 = accuracy(logits, y_batch, topk=(1, 5))
-                top1_accuracy += top1[0]
-                top5_accuracy += top5[0]
+                # top1_accuracy += top1[0]
+                # top5_accuracy += top5[0]
+                top1_accuracy.update(top1[0], y_batch.size[0])
+                top5_accuracy.update(top5[0], y_batch.size[0])
 
-        top1_accuracy /= (counter + 1)
-        top5_accuracy /= (counter + 1)
+        # top1_accuracy /= (counter + 1)
+        # top5_accuracy /= (counter + 1)
         print(f"Epoch {epoch}\t" +
-              f"Top1 Train accuracy {top1_train_accuracy.item()}\t" +
-              f"Top1 Test accuracy: {top1_accuracy.item()}\t" +
-              f"Top5 test acc: {top5_accuracy.item()}")
+              f"Top1 Train accuracy {top1_train_accuracy.avg}\t" +
+              f"Top1 Test accuracy: {top1_accuracy.avg}\t" +
+              f"Top5 test acc: {top5_accuracy.avg}")
 
 
 if __name__ == "__main__":
