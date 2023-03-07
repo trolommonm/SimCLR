@@ -10,7 +10,7 @@ from data_aug.contrastive_learning_dataset import ContrastiveLearningDataset
 from tqdm import tqdm
 
 
-def get_cifar10_data_loaders(download, root_folder, shuffle=True, batch_size=256, num_workers=16):
+def get_cifar10_data_loaders(download, root_folder, shuffle=False, batch_size=256, num_workers=16):
     train_dataset = datasets.CIFAR10(root_folder, train=True, download=download,
                                      transform=transforms.Compose([transforms.RandomResizedCrop(size=32),
                                                                    transforms.ToTensor()])
