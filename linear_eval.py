@@ -10,28 +10,27 @@ from data_aug.contrastive_learning_dataset import ContrastiveLearningDataset
 from tqdm import tqdm
 
 
-def get_cifar10_data_loaders(download, shuffle=False, batch_size=256):
-    train_dataset = datasets.CIFAR10('./datasets', train=True, download=download,
+def get_cifar10_data_loaders(download, root_folder, shuffle=True, batch_size=256, num_workers=16):
+    train_dataset = datasets.CIFAR10(root_folder, train=True, download=download,
                                      transform=transforms.Compose([transforms.RandomResizedCrop(size=32),
                                                                    transforms.ToTensor()])
                                      )
-
     train_loader = DataLoader(train_dataset, batch_size=batch_size,
-                              num_workers=8, drop_last=False, shuffle=shuffle)
+                              num_workers=num_workers, drop_last=False, shuffle=shuffle)
 
-    test_dataset = datasets.CIFAR10('./datasets', train=False, download=download,
+    test_dataset = datasets.CIFAR10(root_folder, train=False, download=download,
                                     transform=transforms.ToTensor())
-
     test_loader = DataLoader(test_dataset, batch_size=2 * batch_size,
-                             num_workers=8, drop_last=False, shuffle=shuffle)
+                             num_workers=num_workers, drop_last=False)
+
     return train_loader, test_loader
 
 
-def main():
+def main(args):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print("Using device:", device)
 
-    checkpoint = torch.load('./runs/Sep13_14-42-58_alvin-desktop/checkpoint_1000.pth.tar', map_location=device)
+    checkpoint = torch.load(args.ckpt, map_location=device)
     state_dict = checkpoint['state_dict']
 
     for k in list(state_dict.keys()):
@@ -57,13 +56,16 @@ def main():
     parameters = list(filter(lambda p: p.requires_grad, model.parameters()))
     assert len(parameters) == 2  # fc.weight, fc.bias
 
-    train_loader, test_loader = get_cifar10_data_loaders(download=True, batch_size=1024)
+    train_loader, test_loader = get_cifar10_data_loaders(download=True,
+                                                         root_folder=args.data_path,
+                                                         batch_size=args.batch_size,
+                                                         num_workers=args.num_workers) # batch_size=1024)
 
     # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-6)
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.1, weight_decay=0.0001, momentum=0.9)
+    optimizer = torch.optim.SGD(model.parameters(), lr=args.learning_rate, weight_decay=0.0001, momentum=0.9)
     criterion = torch.nn.CrossEntropyLoss().to(device)
 
-    epochs = 100
+    epochs = args.epochs
     for epoch in range(epochs):
         model.train()
         top1_train_accuracy = 0
@@ -106,4 +108,19 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data-path', metavar='DIR', default='./datasets',
+                        help='path to dataset')
+    parser.add_argument('--ckpt', required=True,
+                        help='path to the ckpt file')
+    parser.add_argument('--batch-size', type=int,
+                        help='batch size')
+    parser.add_argument('--learning-rate', type=float, default=0.1,
+                        help='learning rate')
+    parser.add_argument('--epochs', type=int, default=100,
+                        help='number of epochs to run')
+    parser.add_argument('--num-workers', type=int, default=16,
+                        help='number of workers for data loader')
+
+    args = parser.parse_args()
+    main(args)
