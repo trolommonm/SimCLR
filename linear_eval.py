@@ -40,7 +40,10 @@ def main(args):
                 state_dict[k[len("backbone."):]] = state_dict[k]
         del state_dict[k]
 
-    model = torchvision.models.resnet18(weights=None, num_classes=10)
+    if args.arch == 'resnet18':
+        model = torchvision.models.resnet18(weights=None, num_classes=10)
+    elif args.arch == 'resnet50':
+        model = torchvision.models.resnet50(weights=None, num_classes=10)
     model.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
     model.maxpool = nn.Identity()
     model = model.to(device)
@@ -113,6 +116,8 @@ if __name__ == "__main__":
                         help='path to dataset')
     parser.add_argument('--ckpt', required=True,
                         help='path to the ckpt file')
+    parser.add_argument('--arch', choices=['resnet18', 'resnet50'],
+                        help='resnet18 or resnet50')
     parser.add_argument('--batch-size', type=int,
                         help='batch size')
     parser.add_argument('--learning-rate', type=float, default=0.1,
