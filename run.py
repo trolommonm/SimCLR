@@ -78,10 +78,7 @@ def main():
         train_dataset, batch_size=args.batch_size, shuffle=True,
         num_workers=args.workers, pin_memory=True, drop_last=True)
 
-    model = ResNetSimCLR(base_model=args.arch, out_dim=args.out_dim)
-    if args.dataset_name == "cifar10":
-        model.backbone.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        model.backbone.maxpool = nn.Identity()
+    model = ResNetSimCLR(base_model=args.arch, out_dim=args.out_dim, dataset_name=args.dataset_name)
 
     # optimizer = torch.optim.Adam(model.parameters(), args.lr, weight_decay=args.weight_decay)
     # optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.weight_decay, nesterov=True)
