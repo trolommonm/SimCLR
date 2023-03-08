@@ -16,9 +16,8 @@ from datetime import datetime
 
 def get_cifar10_data_loaders(download, root_folder, shuffle=False, batch_size=256, num_workers=16):
     train_dataset = datasets.CIFAR10(root_folder, train=True, download=download,
-                                     transform=transforms.Compose([transforms.ToTensor()])
-                                     # transform=transforms.Compose([transforms.RandomResizedCrop(size=32),
-                                     #                               transforms.ToTensor()])
+                                     transform=transforms.Compose([transforms.RandomResizedCrop(size=32),
+                                                                   transforms.ToTensor()])
                                      )
     train_loader = DataLoader(train_dataset, batch_size=batch_size,
                               num_workers=num_workers, drop_last=False, shuffle=shuffle)
