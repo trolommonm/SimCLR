@@ -73,7 +73,7 @@ def main(args):
                                                          num_workers=args.num_workers) # batch_size=1024)
 
     # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-6)
-    optimizer = torch.optim.SGD(model.parameters(), lr=args.learning_rate, weight_decay=0.0001, momentum=0.9)
+    optimizer = torch.optim.SGD(parameters, lr=args.learning_rate, weight_decay=0.0001, momentum=0.9)
     criterion = torch.nn.CrossEntropyLoss().to(device)
 
     largest_test_acc = float('-inf')
